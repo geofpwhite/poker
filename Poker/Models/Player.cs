@@ -13,6 +13,7 @@ public class Player
     public int Chips { get; set; } = 0;
     public Card[] Cards { get; set; } = [];
     public bool Folded { get; set; } = false;
+    public int LastBet { get; set; } = 0;
 
     // public Player(string name, int chips)
     // {
@@ -20,5 +21,5 @@ public class Player
     //     Chips = chips;
     // }
 }
-    
+
 

@@ -1,6 +1,7 @@
 namespace Poker.Models;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 public class Poker
@@ -10,11 +11,15 @@ public class Poker
 
     public int Round { get; set; } = 0;
     public int Dealer { get; set; } = 0;
-    public int SmallBlind { get; set; } = 1;
-    public int BigBlind { get; set; } = 2;
+    public int SmallBlindAmount { get; set; } = 1;
+    public int BigBlindAmount { get; set; } = 2;
     public int Pot { get; set; } = 0;
     public int CurrentBet { get; set; } = 0;
+
+    public int LastPlayerToRaise { get; set; } = 0;
     public int Turn { get; set; } = 0;
+    public ReaderWriterLockSlim Lock = new();
+
     public Card[] CommunityCards { get; set; } = [];
 
     public Poker(Player[]? players = null)
@@ -34,14 +39,14 @@ public class Poker
     }
 
 
-    public int ScoreHand(Card[] cards)
+    public Hand ScoreHand(Card[] cards)
     {
         if (cards.Length != 7)
         {
-            return -1;
+            return Hand.HighCard;
         }
         cards = cards.OrderBy(card => card).ToArray();
-        int returnScore = 0;
+        Hand returnScore = Hand.HighCard;
         Dictionary<CardValue, int> values = [];
         Dictionary<CardSuit, int> suits = [];
         Dictionary<CardSuit, CardValue[]> valueSuits = [];
@@ -81,39 +86,39 @@ public class Poker
                 case 2:
                     switch (returnScore)
                     {
-                        case 0:
-                            returnScore = 1; // Pair
+                        case Hand.HighCard:
+                            returnScore = Hand.Pair; // Pair
                             break;
-                        case 1:
-                            returnScore = 2; // Two pair
+                        case Hand.Pair:
+                            returnScore = Hand.TwoPair; // Two pair
                             break;
-                        case 3:
-                            returnScore = 6; // Full house
+                        case Hand.TwoPair:
+                            returnScore = Hand.FullHouse; // Full house
                             break;
                     }
                     break;
                 case 3:
                     switch (returnScore)
                     {
-                        case <= 1:
-                            returnScore = 3; // Three of a kind
+                        case <= Hand.Pair:
+                            returnScore = Hand.ThreeOfAKind; // Three of a kind
                             break;
-                        case > 1 and < 6:
-                            returnScore = 6; // Full house
+                        case > Hand.Pair and < Hand.FullHouse:
+                            returnScore = Hand.FullHouse; // Full house
                             break;
                     }
                     break;
                 case 4:
-                    returnScore = 7; // Four of a kind
+                    returnScore = Hand.FourOfAKind; // Four of a kind
                     return returnScore;
             }
         }
         foreach (CardSuit suit in suits.Keys)
         {
-            if (suits[suit] >= 5 && returnScore < 5)
+            if (suits[suit] >= 5 && returnScore < Hand.Flush)
             {
                 //flush
-                returnScore = 5;
+                returnScore = Hand.Flush;
             }
         }
 
@@ -128,33 +133,32 @@ public class Poker
             bool sequential = cardsToCheck.Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next).All(isSequential => isSequential);
             foreach (CardSuit suit in valueSuits.Keys)
             {
-                if (cardsToCheck.All(value => valueSuits[suit].Any(suit2 => suit2 == value)))
+                if (cardsToCheck.All(value => valueSuits[suit].Any(suit2 => suit2 == value)) && sequential)
                 {
-                    if (sequential)
-                    {
-                        returnScore = 8;
-                        return returnScore;
-                    }
+                    returnScore = Hand.StraightFlush;
+                    return returnScore;
                 }
             }
 
-            if (sequential && returnScore < 4)
+            if (sequential && returnScore < Hand.Straight)
             {
-                returnScore = 4;
+                returnScore = Hand.Straight;
                 break;
             }
         }
-        
+
         //handle if ace is low part of straight
-        foreach(CardSuit suit in valueSuits.Keys){
-            if (valueSuits[suit].Contains(CardValue.Ace) && valueSuits[suit].Contains(CardValue.Two) && valueSuits[suit].Contains(CardValue.Three) && valueSuits[suit].Contains(CardValue.Four) && valueSuits[suit].Contains(CardValue.Five)){
-                returnScore = 8;
+        foreach (CardSuit suit in valueSuits.Keys)
+        {
+            if (valueSuits[suit].Contains(CardValue.Ace) && valueSuits[suit].Contains(CardValue.Two) && valueSuits[suit].Contains(CardValue.Three) && valueSuits[suit].Contains(CardValue.Four) && valueSuits[suit].Contains(CardValue.Five))
+            {
+                returnScore = Hand.StraightFlush;
                 return returnScore;
             }
         }
         if (values.Keys.Contains(CardValue.Ace) && values.Keys.Contains(CardValue.Two) && values.Keys.Contains(CardValue.Three) && values.Keys.Contains(CardValue.Four) && values.Keys.Contains(CardValue.Five))
         {
-            returnScore = 4;
+            returnScore = Hand.Straight;
         }
 
         //check for straight flush
@@ -162,11 +166,47 @@ public class Poker
         return returnScore;
     }
 
+    public void AdvanceRound()
+    {
+        // called every time the valid player acts
+
+        //increase round if all players have acted 
+
+        Turn = (Turn + 1) % Players.Length;
+        while (Players[Turn].Folded) Turn = (Turn + 1) % Players.Length;
+        if (Players.Where(player => !player.Folded).All(player => player.LastBet == CurrentBet))
+        {
+            if (Round == 4)
+            {
+                Showdown();
+                Shuffle();
+                Deal();
+                Round = 0;
+                Turn = 0;
+                foreach (Player player in Players)
+                {
+                    player.LastBet = 0;
+                }
+                return;
+            }
+            Round++;
+            Deal();
+            CurrentBet = 0;
+            foreach (Player player in Players)
+            {
+                player.LastBet = 0;
+            }
+        }
+
+
+
+
+    }
 
     public Player? CompareHands(Player p1, Player p2)
     {
-        int p1Score = ScoreHand(p1.Cards.Concat(CommunityCards).ToArray());
-        int p2Score = ScoreHand(p2.Cards.Concat(CommunityCards).ToArray());
+        Hand p1Score = ScoreHand(p1.Cards.Concat(CommunityCards).ToArray());
+        Hand p2Score = ScoreHand(p2.Cards.Concat(CommunityCards).ToArray());
         if (p1Score == p2Score)
         {
             //could be any hand
@@ -220,6 +260,8 @@ public class Poker
                 Deck = Deck.Skip(1).ToArray();
                 break;
 
+            default:
+                return;
         }
     }
     public void Showdown()
@@ -229,14 +271,4 @@ public class Poker
 
 
     // go through players until bet is settled, add cards to community cards
-    public void Bet()
-    {
-        Players[Dealer + 1 % Players.Length].Chips -= SmallBlind;
-        Pot += SmallBlind;
-        Players[Dealer + 2 % Players.Length].Chips -= BigBlind;
-        Pot += BigBlind;
-        
-        CurrentBet = BigBlind;
-        int lastRaiserIndex = Dealer+2 % Players.Length;
-    }
 }

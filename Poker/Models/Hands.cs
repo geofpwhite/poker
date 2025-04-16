@@ -1,7 +1,8 @@
 
 
 
-public enum Hands{
+public enum Hand
+{
     HighCard,
     Pair,
     TwoPair,
