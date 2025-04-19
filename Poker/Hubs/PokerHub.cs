@@ -68,10 +68,8 @@ public class PokerHub : Hub
 
     private void HandlePlayerAction(string gameId, string action, object data)
     {
-        Console.WriteLine($"{Context.ConnectionId} is handling action: {action}");
         if (!_pokerGames.ContainsKey(gameId)) return;
         int index = _pokerGames[gameId].Players.ToList().FindIndex(p => p.ConnectionId == Context.ConnectionId);
-        Console.WriteLine($"Index: {index}, Turn: {_pokerGames[gameId].Turn}");
         if (index == -1 || index != _pokerGames[gameId].Turn) return;
         _pokerGames[gameId].Lock.EnterWriteLock();
         switch (action.ToLower())
@@ -108,7 +106,6 @@ public class PokerHub : Hub
                     if (callingPlayer.Chips >= callAmount)
                     {
                         callingPlayer.Chips -= callAmount;
-
                         _pokerGames[gameId].Pot += callAmount;
                     }
                 }

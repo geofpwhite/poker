@@ -3,13 +3,14 @@ using Xunit;
 
 namespace Poker.Tests;
 using Poker.Models;
+
 public class PokerTests
 {
     [Fact]
     public void Shuffle_ShouldRandomizeDeck()
     {
         // Arrange
-        Player player1 = new() { Name = "Player1", Chips = 100 };
+        Player player1 = new("Player1") { Name = "Player1",  Chips = 100 };
         var players = new Player[] { player1 };
         // var game = new Poker(players);
         var game = new Poker { Players = players };
@@ -27,7 +28,7 @@ public class PokerTests
     public void Deal_ShouldGiveEachPlayerTwoCards()
     {
         // Arrange
-        Player player1 = new() { Name = "Player1", Chips = 100 };
+        Player player1 = new("Player1") { Name = "Player1", Chips = 100 };
         var players = new Player[] { player1 };
         var game = new Poker(players);
 
@@ -49,39 +50,39 @@ public class PokerTests
         var game = new Poker();
         var hand = new Card[] { Card.AceH, Card.AceD, Card.TwoH, Card.ThreeD, Card.FourC, Card.EightC, Card.SevenS };
         var score = game.ScoreHand(hand);
-        Assert.Equal(1, score);
+        Assert.Equal(Hand.Pair, score);
 
         hand = new Card[] { Card.AceH, Card.AceD, Card.TwoH, Card.TwoD, Card.FourC, Card.FiveS, Card.SixS };
         score = game.ScoreHand(hand);
-        Assert.Equal(2, score);
+        Assert.Equal(Hand.TwoPair, score);
         
         hand = new Card[] { Card.AceH, Card.AceD, Card.AceC, Card.TwoD, Card.FourC, Card.SevenS, Card.SixS };
         score = game.ScoreHand(hand);
-        Assert.Equal(3, score);
+        Assert.Equal(Hand.ThreeOfAKind, score);
 
         hand = new Card[] { Card.KingH,Card.KingD, Card.TwoH, Card.ThreeD, Card.FourC, Card.FiveS, Card.SixS };
         score = game.ScoreHand(hand);
-        Assert.Equal(4, score);
+        Assert.Equal(Hand.Straight, score);
         hand = new Card[] { Card.AceH,Card.KingD, Card.TwoH, Card.ThreeD, Card.FourC, Card.FiveS, Card.SevenS };
         score = game.ScoreHand(hand);
-        Assert.Equal(4, score);
+        Assert.Equal(Hand.Straight, score);
         
         hand = new Card[] { Card.AceH, Card.AceD, Card.TwoH, Card.ThreeH, Card.FourH, Card.SevenH, Card.SixH };
         score = game.ScoreHand(hand);
-        Assert.Equal(5, score);
+        Assert.Equal(Hand.Flush, score);
 
-        hand = new Card[] { Card.AceH, Card.AceD, Card.TwoH, Card.TwoD, Card.TwoC, Card.FiveS, Card.SixS };
+        hand = new Card[] { Card.AceH,Card.TwoH, Card.AceD,  Card.TwoD, Card.TwoC, Card.FiveS, Card.SixS };
         score = game.ScoreHand(hand);
-        Assert.Equal(6, score);
+        Assert.Equal(Hand.FullHouse, score);
 
         hand = new Card[] { Card.AceH, Card.AceD, Card.AceS, Card.AceC, Card.FourC, Card.FiveS, Card.SixS };
         score = game.ScoreHand(hand);
-        Assert.Equal(7, score);
+        Assert.Equal(Hand.FourOfAKind, score);
         
 
         hand = new Card[] { Card.AceH, Card.TwoH, Card.ThreeH, Card.FourH, Card.FiveH, Card.SixC, Card.SevenC };
         score = game.ScoreHand(hand);
-        Assert.Equal(8, score);
+        Assert.Equal(Hand.StraightFlush, score);
 
 
     }
