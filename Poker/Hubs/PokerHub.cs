@@ -10,6 +10,7 @@ public class PokerHub : Hub
     private readonly ILogger<PokerHub> _logger;
     private static Dictionary<string, Models.Poker> _pokerGames = [];
     private static readonly Dictionary<string, string> _playerConnections = new();
+
     public PokerHub(ILogger<PokerHub> logger, Models.Poker pokerGame)
     {
         _logger = logger;
@@ -48,7 +49,15 @@ public class PokerHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
         if (_pokerGames.ContainsKey(gameId))
         {
-            _pokerGames[gameId].Players = _pokerGames[gameId].Players.Append(new Models.Player(Context.ConnectionId) { Name = "", ConnectionId = Context.ConnectionId }).ToArray();
+            _pokerGames[gameId].Players = _pokerGames[gameId]
+                .Players.Append(
+                    new Models.Player(Context.ConnectionId)
+                    {
+                        Name = "",
+                        ConnectionId = Context.ConnectionId,
+                    }
+                )
+                .ToArray();
         }
         await Clients.Group(gameId).SendAsync("UserJoined", Context.ConnectionId);
     }
@@ -63,30 +72,23 @@ public class PokerHub : Hub
     {
         // Handle the game state modification based on the action
         HandlePlayerAction(gameId, action, data);
-        await Clients.Group(gameId).SendAsync("GameStateUpdated", new Poker.Models.Poker(_pokerGames[gameId].Players));
+        await Clients
+            .Group(gameId)
+            .SendAsync("GameStateUpdated", new Poker.Models.Poker(_pokerGames[gameId].Players));
     }
 
     private void HandlePlayerAction(string gameId, string action, object data)
     {
-        if (!_pokerGames.ContainsKey(gameId)) return;
-        int index = _pokerGames[gameId].Players.ToList().FindIndex(p => p.ConnectionId == Context.ConnectionId);
-        if (index == -1 || index != _pokerGames[gameId].Turn) return;
+        if (!_pokerGames.ContainsKey(gameId))
+            return;
+        int index = _pokerGames[gameId]
+            .Players.ToList()
+            .FindIndex(p => p.ConnectionId == Context.ConnectionId);
+        if (index == -1 || index != _pokerGames[gameId].Turn)
+            return;
         _pokerGames[gameId].Lock.EnterWriteLock();
         switch (action.ToLower())
         {
-            case "bet":
-                if (data is int betAmount)
-                {
-                    var player = _pokerGames[gameId].Players[index];
-                    if (player != null && player.Chips >= betAmount)
-                    {
-                        player.Chips -= betAmount;
-                        player.LastBet = betAmount;
-                        _pokerGames[gameId].Pot += betAmount;
-                        _pokerGames[gameId].CurrentBet = betAmount;
-                    }
-                }
-                break;
             case "fold":
                 var foldingPlayer = _pokerGames[gameId].Players[index];
                 if (foldingPlayer != null)
@@ -135,8 +137,5 @@ public class PokerHub : Hub
         // After handling the action, check if the round should progress
     }
 
-    private void CheckRoundProgress(string gameId)
-    {
-
-    }
+    private void CheckRoundProgress(string gameId) { }
 }

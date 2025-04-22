@@ -1,4 +1,5 @@
 namespace Poker.Models;
+
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
@@ -40,7 +41,6 @@ public class Poker
         CommunityCards = [];
     }
 
-
     public Hand ScoreHand(Card[] cards)
     {
         if (cards.Length != 7)
@@ -53,8 +53,8 @@ public class Poker
         Dictionary<CardSuit, int> suits = [];
         Dictionary<CardSuit, CardValue[]> valueSuits = [];
         /*
-         * 
-         * high card 0 
+         *
+         * high card 0
          * pair 1
          * two pair 2
          * three of a kind 3
@@ -79,7 +79,9 @@ public class Poker
             }
             if (!valueSuits.TryAdd(suitAndValue.Item1, [suitAndValue.Item2]))
             {
-                valueSuits[suitAndValue.Item1] = valueSuits[suitAndValue.Item1].Concat([suitAndValue.Item2]).ToArray();
+                valueSuits[suitAndValue.Item1] = valueSuits[suitAndValue.Item1]
+                    .Concat([suitAndValue.Item2])
+                    .ToArray();
             }
 
             // Check for card combinations using nested switches
@@ -105,7 +107,8 @@ public class Poker
                         case <= Hand.Pair:
                             returnScore = Hand.ThreeOfAKind; // Three of a kind
                             break;
-                        case > Hand.Pair and < Hand.FullHouse:
+                        case > Hand.Pair
+                        and < Hand.FullHouse:
                             returnScore = Hand.FullHouse; // Full house
                             break;
                     }
@@ -131,11 +134,20 @@ public class Poker
         }
         for (int i = 0; i < len - 5; i++)
         {
-            CardValue[] cardsToCheck = values.Keys.OrderBy(value => value).Skip(i).Take(5).ToArray();
-            bool sequential = cardsToCheck.Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next).All(isSequential => isSequential);
+            CardValue[] cardsToCheck = values
+                .Keys.OrderBy(value => value)
+                .Skip(i)
+                .Take(5)
+                .ToArray();
+            bool sequential = cardsToCheck
+                .Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next)
+                .All(isSequential => isSequential);
             foreach (CardSuit suit in valueSuits.Keys)
             {
-                if (cardsToCheck.All(value => valueSuits[suit].Any(suit2 => suit2 == value)) && sequential)
+                if (
+                    cardsToCheck.All(value => valueSuits[suit].Any(suit2 => suit2 == value))
+                    && sequential
+                )
                 {
                     returnScore = Hand.StraightFlush;
                     return returnScore;
@@ -152,13 +164,25 @@ public class Poker
         //handle if ace is low part of straight
         foreach (CardSuit suit in valueSuits.Keys)
         {
-            if (valueSuits[suit].Contains(CardValue.Ace) && valueSuits[suit].Contains(CardValue.Two) && valueSuits[suit].Contains(CardValue.Three) && valueSuits[suit].Contains(CardValue.Four) && valueSuits[suit].Contains(CardValue.Five))
+            if (
+                valueSuits[suit].Contains(CardValue.Ace)
+                && valueSuits[suit].Contains(CardValue.Two)
+                && valueSuits[suit].Contains(CardValue.Three)
+                && valueSuits[suit].Contains(CardValue.Four)
+                && valueSuits[suit].Contains(CardValue.Five)
+            )
             {
                 returnScore = Hand.StraightFlush;
                 return returnScore;
             }
         }
-        if (values.Keys.Contains(CardValue.Ace) && values.Keys.Contains(CardValue.Two) && values.Keys.Contains(CardValue.Three) && values.Keys.Contains(CardValue.Four) && values.Keys.Contains(CardValue.Five))
+        if (
+            values.Keys.Contains(CardValue.Ace)
+            && values.Keys.Contains(CardValue.Two)
+            && values.Keys.Contains(CardValue.Three)
+            && values.Keys.Contains(CardValue.Four)
+            && values.Keys.Contains(CardValue.Five)
+        )
         {
             returnScore = Hand.Straight;
         }
@@ -172,16 +196,18 @@ public class Poker
     {
         // called every time the valid player acts
 
-        //increase round if all players have acted 
+        //increase round if all players have acted
 
         Turn = (Turn + 1) % Players.Length;
-        while (Players[Turn].Folded) Turn = (Turn + 1) % Players.Length;
+        while (Players[Turn].Folded)
+            Turn = (Turn + 1) % Players.Length;
         if (Players.Where(player => !player.Folded).All(player => player.LastBet == CurrentBet))
         {
             if (Round == 4)
             {
                 Showdown();
                 Shuffle();
+                Pot = 0;
                 Deal();
                 Round = 0;
                 Turn = 0;
@@ -224,8 +250,20 @@ public class Poker
         {
             case Hand.Pair:
                 //winner is higher pair; can be equal
-                Card[] p1Pair = p1.Cards.Where(card => p1.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 2).ToArray();
-                Card[] p2Pair = p2.Cards.Where(card => p2.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 2).ToArray();
+                Card[] p1Pair = p1
+                    .Cards.Where(card =>
+                        p1.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 2
+                    )
+                    .ToArray();
+                Card[] p2Pair = p2
+                    .Cards.Where(card =>
+                        p2.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 2
+                    )
+                    .ToArray();
                 CardValue p1PairValue = SuitAndValue(p1Pair[0]).Item2;
                 CardValue p2PairValue = SuitAndValue(p2Pair[0]).Item2;
                 if (p1PairValue > p2PairValue)
@@ -242,8 +280,20 @@ public class Poker
                 }
             case Hand.TwoPair:
                 //winner is higher upper pair; can be equal
-                Card[] p1TwoPair = p1.Cards.Where(card => p1.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 2).ToArray();
-                Card[] p2TwoPair = p2.Cards.Where(card => p2.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 2).ToArray();
+                Card[] p1TwoPair = p1
+                    .Cards.Where(card =>
+                        p1.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 2
+                    )
+                    .ToArray();
+                Card[] p2TwoPair = p2
+                    .Cards.Where(card =>
+                        p2.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 2
+                    )
+                    .ToArray();
                 CardValue upper1 = p1TwoPair.Max(card => SuitAndValue(card).Item2);
                 CardValue upper2 = p2TwoPair.Max(card => SuitAndValue(card).Item2);
                 if (upper1 > upper2)
@@ -260,8 +310,20 @@ public class Poker
                 }
             case Hand.ThreeOfAKind:
                 //winner is higher three of a kind; can not be equal
-                Card[] p1ThreeOfAKind = p1.Cards.Where(card => p1.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
-                Card[] p2ThreeOfAKind = p2.Cards.Where(card => p2.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
+                Card[] p1ThreeOfAKind = p1
+                    .Cards.Where(card =>
+                        p1.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
+                Card[] p2ThreeOfAKind = p2
+                    .Cards.Where(card =>
+                        p2.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
                 CardValue three1 = SuitAndValue(p1ThreeOfAKind[0]).Item2;
                 CardValue three2 = SuitAndValue(p2ThreeOfAKind[0]).Item2;
 
@@ -277,19 +339,26 @@ public class Poker
                 {
                     throw new Exception("Three of a kind is equal, something is wrong");
                 }
-            case Hand.Straight or Hand.StraightFlush:
+            case Hand.Straight
+            or Hand.StraightFlush:
                 //winner is higher straight; can be equal; this can get weird because A12345 loses to 123456 since Ace is a low card
                 CardValue p1MaxStraight = CardValue.Two;
                 CardValue p2MaxStraight = CardValue.Two;
-                HashSet<CardValue> p1Values = new HashSet<CardValue>(p1.Cards.Select(card => SuitAndValue(card).Item2));
-                HashSet<CardValue> p2Values = new HashSet<CardValue>(p2.Cards.Select(card => SuitAndValue(card).Item2));
+                HashSet<CardValue> p1Values = new HashSet<CardValue>(
+                    p1.Cards.Select(card => SuitAndValue(card).Item2)
+                );
+                HashSet<CardValue> p2Values = new HashSet<CardValue>(
+                    p2.Cards.Select(card => SuitAndValue(card).Item2)
+                );
                 CardValue[] ary1 = p1Values.Order().ToArray();
                 CardValue[] ary2 = p2Values.Order().ToArray();
 
                 for (int i = 0; i < ary1.Length - 5; i++)
                 {
                     CardValue[] cardsToCheck = ary1.Skip(i).Take(5).ToArray();
-                    bool sequential = cardsToCheck.Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next).All(isSequential => isSequential);
+                    bool sequential = cardsToCheck
+                        .Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next)
+                        .All(isSequential => isSequential);
                     if (sequential && !cardsToCheck.Contains(CardValue.Ace))
                     {
                         p1MaxStraight = cardsToCheck.Max(card => card);
@@ -309,7 +378,9 @@ public class Poker
                 for (int i = 0; i < ary2.Length - 5; i++)
                 {
                     CardValue[] cardsToCheck = ary2.Skip(i).Take(5).ToArray();
-                    bool sequential = cardsToCheck.Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next).All(isSequential => isSequential);
+                    bool sequential = cardsToCheck
+                        .Zip(cardsToCheck.Skip(1), (current, next) => current + 1 == next)
+                        .All(isSequential => isSequential);
                     if (sequential && !cardsToCheck.Contains(CardValue.Ace))
                     {
                         p2MaxStraight = cardsToCheck.Max(card => card);
@@ -346,11 +417,15 @@ public class Poker
                 {
                     if (p1.Cards.Count(card => SuitAndValue(card).Item1 == suit) >= 5)
                     {
-                        p1MaxValue = SuitAndValue(p1.Cards.Where(card => SuitAndValue(card).Item1 == suit).Max()).Item2;
+                        p1MaxValue = SuitAndValue(
+                            p1.Cards.Where(card => SuitAndValue(card).Item1 == suit).Max()
+                        ).Item2;
                     }
                     if (p2.Cards.Count(card => SuitAndValue(card).Item1 == suit) >= 5)
                     {
-                        p2MaxValue = SuitAndValue(p2.Cards.Where(card => SuitAndValue(card).Item1 == suit).Max()).Item2;
+                        p2MaxValue = SuitAndValue(
+                            p2.Cards.Where(card => SuitAndValue(card).Item1 == suit).Max()
+                        ).Item2;
                     }
                 }
                 if (p1MaxValue > p2MaxValue)
@@ -368,8 +443,20 @@ public class Poker
 
             case Hand.FullHouse:
                 //winner is higher three of a kind; can not be equal
-                Card[] p1FullHouseThreeOfAKind = p1.Cards.Where(card => p1.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
-                Card[] p2FullHouseThreeOfAKind = p2.Cards.Where(card => p2.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
+                Card[] p1FullHouseThreeOfAKind = p1
+                    .Cards.Where(card =>
+                        p1.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
+                Card[] p2FullHouseThreeOfAKind = p2
+                    .Cards.Where(card =>
+                        p2.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
                 CardValue threefh1 = SuitAndValue(p1FullHouseThreeOfAKind[0]).Item2;
                 CardValue threefh2 = SuitAndValue(p2FullHouseThreeOfAKind[0]).Item2;
                 if (threefh1 > threefh2)
@@ -386,8 +473,20 @@ public class Poker
                 }
             case Hand.FourOfAKind:
                 //winner is higher four of a kind; can not be equal
-                Card[] p1FourOfAKind = p1.Cards.Where(card => p1.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
-                Card[] p2FourOfAKind = p2.Cards.Where(card => p2.Cards.Count(card2 => SuitAndValue(card2).Item2 == SuitAndValue(card).Item2) == 3).ToArray();
+                Card[] p1FourOfAKind = p1
+                    .Cards.Where(card =>
+                        p1.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
+                Card[] p2FourOfAKind = p2
+                    .Cards.Where(card =>
+                        p2.Cards.Count(card2 =>
+                            SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
+                        ) == 3
+                    )
+                    .ToArray();
                 CardValue four1 = SuitAndValue(p1FourOfAKind[0]).Item2;
                 CardValue four2 = SuitAndValue(p2FourOfAKind[0]).Item2;
                 if (four1 > four2)
@@ -419,10 +518,9 @@ public class Poker
                 {
                     return null;
                 }
-
+            default:
+                return null;
         }
-
-        return null;
     }
 
     public Tuple<CardSuit, CardValue> SuitAndValue(Card card)
@@ -464,7 +562,8 @@ public class Poker
                     Deck = Deck.Skip(1).ToArray();
                 }
                 break;
-            case 2 or 3:
+            case 2
+            or 3:
                 CommunityCards = CommunityCards.Append(Deck[0]).ToArray();
                 Deck = Deck.Skip(1).ToArray();
                 break;
@@ -486,10 +585,14 @@ public class Poker
     public void Showdown()
     {
         Player[] players = Players.Where(player => !player.Folded).ToArray();
-        Hand[] hands = players.Select(player => ScoreHand(player.Cards.Concat(CommunityCards).ToArray())).ToArray();
+        Hand[] hands = players
+            .Select(player => ScoreHand(player.Cards.Concat(CommunityCards).ToArray()))
+            .ToArray();
         Hand maxHand = hands.Max();
-        Tuple<Hand, Player>[] winners = hands.Zip(players, (hand, player) => new Tuple<Hand, Player>(hand, player))
-        .Where((handAndPlayer) => handAndPlayer.Item1 == maxHand).ToArray();
+        Tuple<Hand, Player>[] winners = hands
+            .Zip(players, (hand, player) => new Tuple<Hand, Player>(hand, player))
+            .Where((handAndPlayer) => handAndPlayer.Item1 == maxHand)
+            .ToArray();
 
         if (winners.Length == 1)
         {
@@ -497,9 +600,24 @@ public class Poker
         }
         else
         {
-
+            Tuple<Hand, Player>[] realWinners = [winners[0]];
+            for (int i = 1; i < winners.Length; i++)
+            {
+                Player? betterHand = CompareHands(realWinners[^1].Item2, winners[i].Item2);
+                if (betterHand == null)
+                {
+                    realWinners.Append(winners[i]);
+                }
+                else if (betterHand == winners[i].Item2)
+                {
+                    realWinners = [winners[i]];
+                }
+            }
+            foreach (Player p in realWinners.Select(tuple => tuple.Item2))
+            {
+                p.Chips += Pot / realWinners.Length;
+            }
         }
     }
 
-    // go through players until bet is settled, add cards to community cards
 }
