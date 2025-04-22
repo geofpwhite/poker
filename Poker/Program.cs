@@ -1,5 +1,6 @@
 using Poker.Hubs;
 using Poker.Models;
+using Poker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,7 @@ builder.Services.AddSignalR()
         options.PayloadSerializerOptions.PropertyNamingPolicy = null;
     });
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<Poker.Models.Poker>();
+// builder.Services.AddSingleton<Poker.Models.Poker>();
 
 var app = builder.Build();
 
@@ -57,7 +58,20 @@ app.MapGet(
 })
 .WithName("GetWeatherForecast");
 
+
 app.MapHub<PokerHub>("/pokerhub");
+app.MapGet("/games", () =>
+{
+    return PokerHub.Games.Select(g => new
+    {
+        Id = g.Key,
+        Players = g.Value.Players.Select(p => new
+        {
+            p.Name,
+            p.ConnectionId
+        })
+    });
+});
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

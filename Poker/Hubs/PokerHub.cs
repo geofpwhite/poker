@@ -8,7 +8,7 @@ namespace Poker.Hubs;
 public class PokerHub : Hub
 {
     private readonly ILogger<PokerHub> _logger;
-    private static Dictionary<string, Models.Poker> _pokerGames = [];
+    public static Dictionary<string, Models.Poker> Games = [];
     private static readonly Dictionary<string, string> _playerConnections = new();
 
     public PokerHub(ILogger<PokerHub> logger, Models.Poker pokerGame)
@@ -32,24 +32,24 @@ public class PokerHub : Hub
 
     public async Task StartGame(string gameId)
     {
-        if (!_pokerGames.ContainsKey(gameId))
+        if (!Games.ContainsKey(gameId))
         {
-            _pokerGames.Add(gameId, new Models.Poker());
+            Games.Add(gameId, new Models.Poker());
         }
         else
         {
-            _pokerGames[gameId] = new Models.Poker(_pokerGames[gameId].Players);
+            Games[gameId] = new Models.Poker(Games[gameId].Players);
         }
 
-        await Clients.Group(gameId).SendAsync("GameStarted", _pokerGames.GetValueOrDefault(gameId));
+        await Clients.Group(gameId).SendAsync("GameStarted", Games.GetValueOrDefault(gameId));
     }
 
     public async Task JoinGame(string gameId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-        if (_pokerGames.ContainsKey(gameId))
+        if (Games.ContainsKey(gameId))
         {
-            _pokerGames[gameId].Players = _pokerGames[gameId]
+            Games[gameId].Players = Games[gameId]
                 .Players.Append(
                     new Models.Player(Context.ConnectionId)
                     {
@@ -74,23 +74,23 @@ public class PokerHub : Hub
         HandlePlayerAction(gameId, action, data);
         await Clients
             .Group(gameId)
-            .SendAsync("GameStateUpdated", new Poker.Models.Poker(_pokerGames[gameId].Players));
+            .SendAsync("GameStateUpdated", new Poker.Models.Poker(Games[gameId].Players));
     }
 
     private void HandlePlayerAction(string gameId, string action, object data)
     {
-        if (!_pokerGames.ContainsKey(gameId))
+        if (!Games.ContainsKey(gameId))
             return;
-        int index = _pokerGames[gameId]
+        int index = Games[gameId]
             .Players.ToList()
             .FindIndex(p => p.ConnectionId == Context.ConnectionId);
-        if (index == -1 || index != _pokerGames[gameId].Turn)
+        if (index == -1 || index != Games[gameId].Turn)
             return;
-        _pokerGames[gameId].Lock.EnterWriteLock();
+        Games[gameId].Lock.EnterWriteLock();
         switch (action.ToLower())
         {
             case "fold":
-                var foldingPlayer = _pokerGames[gameId].Players[index];
+                var foldingPlayer = Games[gameId].Players[index];
                 if (foldingPlayer != null)
                 {
                     foldingPlayer.Folded = true;
@@ -101,14 +101,14 @@ public class PokerHub : Hub
 
                 break;
             case "call":
-                var callingPlayer = _pokerGames[gameId].Players[index];
+                var callingPlayer = Games[gameId].Players[index];
                 if (callingPlayer != null)
                 {
-                    int callAmount = _pokerGames[gameId].CurrentBet;
+                    int callAmount = Games[gameId].CurrentBet;
                     if (callingPlayer.Chips >= callAmount)
                     {
                         callingPlayer.Chips -= callAmount;
-                        _pokerGames[gameId].Pot += callAmount;
+                        Games[gameId].Pot += callAmount;
                     }
                 }
 
@@ -116,23 +116,23 @@ public class PokerHub : Hub
             case "raise":
                 if (data is int raiseAmount)
                 {
-                    var raisingPlayer = _pokerGames[gameId].Players[index];
-                    _pokerGames[gameId].LastPlayerToRaise = index;
+                    var raisingPlayer = Games[gameId].Players[index];
+                    Games[gameId].LastPlayerToRaise = index;
                     if (raisingPlayer != null && raisingPlayer.Chips >= raiseAmount)
                     {
                         raisingPlayer.Chips -= raiseAmount;
                         raisingPlayer.LastBet = raiseAmount;
-                        _pokerGames[gameId].Pot += raiseAmount;
-                        _pokerGames[gameId].CurrentBet = raiseAmount;
+                        Games[gameId].Pot += raiseAmount;
+                        Games[gameId].CurrentBet = raiseAmount;
                     }
                 }
                 break;
             default:
-                _pokerGames[gameId].Lock.ExitWriteLock();
+                Games[gameId].Lock.ExitWriteLock();
                 return;
         }
-        _pokerGames[gameId].AdvanceRound();
-        _pokerGames[gameId].Lock.ExitWriteLock();
+        Games[gameId].AdvanceRound();
+        Games[gameId].Lock.ExitWriteLock();
 
         // After handling the action, check if the round should progress
     }
