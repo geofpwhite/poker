@@ -25,11 +25,12 @@ public class PokerHubService
         await _hubConnection.StartAsync();
     }
 
-    public async Task JoinGameAsync(string playerName)
+    public async Task JoinGameAsync(string playerName, string gameId)
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.InvokeAsync("JoinGame", playerName);
+            Console.WriteLine("joined game");
+            await _hubConnection.InvokeAsync("JoinGame", playerName, gameId);
         }
     }
 
@@ -46,6 +47,22 @@ public class PokerHubService
         if (_hubConnection is not null)
         {
             await _hubConnection.InvokeAsync("PlayerAction", gameId, action, amount);
+        }
+    }
+
+    public async Task CloseGameAsync(string gameId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.InvokeAsync("CloseGame", gameId);
+        }
+    }
+
+    public async Task CreateGameAsync(string gameId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.InvokeAsync("CreateGame", gameId);
         }
     }
 

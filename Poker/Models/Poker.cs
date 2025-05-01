@@ -3,6 +3,7 @@ namespace Poker.Models;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.ObjectPool;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.ObjectPool;
 public class Poker
 {
     public Player[] Players { get; set; } = [];
-    public Card[] Deck { get; set; } = [];
+    private Card[] Deck { get; set; } = [];
 
     public int Round { get; set; } = 0;
     public int Dealer { get; set; } = 0;
@@ -19,16 +20,19 @@ public class Poker
     public int Pot { get; set; } = 0;
     public int CurrentBet { get; set; } = 0;
 
+    public bool Started { get; set; } = false;
     public int LastPlayerToRaise { get; set; } = 0;
     public int Turn { get; set; } = 0;
     public ReaderWriterLockSlim Lock = new();
 
+
+    [JsonConverter(typeof(CardJsonConverter))]
     public Card[] CommunityCards { get; set; } = [];
 
     public Poker(Player[]? players = null)
     {
         Players = players ?? [];
-        Deck = new Card[0];
+        Deck = [];
         foreach (Card card in Enum.GetValues(typeof(Card)))
         {
             Deck = Deck.Append(card).ToArray();
@@ -41,6 +45,11 @@ public class Poker
         CommunityCards = [];
     }
 
+    /// <summary>
+    /// numerically scores hand based on poker hand rankings
+    /// </summary>
+    /// <param name="cards"></param>
+    /// <returns></returns>
     public Hand ScoreHand(Card[] cards)
     {
         if (cards.Length != 7)
@@ -52,18 +61,7 @@ public class Poker
         Dictionary<CardValue, int> values = [];
         Dictionary<CardSuit, int> suits = [];
         Dictionary<CardSuit, CardValue[]> valueSuits = [];
-        /*
-         *
-         * high card 0
-         * pair 1
-         * two pair 2
-         * three of a kind 3
-         * straight 4
-         * flush 5
-         * full house 6
-         * four of a kind 7
-         * straight flush 8
-         */
+        /* high card 0 pair 1 two pair 2 three of a kind 3 straight 4 flush 5 full house 6 four of a kind 7 straight flush 8 */
         foreach (Card card in cards)
         {
             Tuple<CardSuit, CardValue> suitAndValue = SuitAndValue(card);
@@ -187,16 +185,15 @@ public class Poker
             returnScore = Hand.Straight;
         }
 
-        //check for straight flush
 
         return returnScore;
     }
 
+    /// <summary>
+    /// this is called when valid player acts
+    /// </summary>
     public void AdvanceRound()
     {
-        // called every time the valid player acts
-
-        //increase round if all players have acted
 
         Turn = (Turn + 1) % Players.Length;
         while (Players[Turn].Folded)
@@ -208,12 +205,13 @@ public class Poker
                 Showdown();
                 Shuffle();
                 Pot = 0;
-                Deal();
                 Round = 0;
+                Deal();
                 Turn = 0;
                 foreach (Player player in Players)
                 {
                     player.LastBet = 0;
+                    player.Folded = false;
                 }
             }
             else
@@ -250,8 +248,7 @@ public class Poker
         {
             case Hand.Pair:
                 //winner is higher pair; can be equal
-                Card[] p1Pair = p1
-                    .Cards.Where(card =>
+                Card[] p1Pair = p1.Cards.Where(card =>
                         p1.Cards.Count(card2 =>
                             SuitAndValue(card2).Item2 == SuitAndValue(card).Item2
                         ) == 2
@@ -546,7 +543,8 @@ public class Poker
         {
             case 0:
                 Shuffle();
-                foreach (var player in Players)
+                CommunityCards = new Card[0];
+                foreach (Player player in Players)
                 {
                     player.Cards = new Card[2];
                     player.Cards[0] = Deck[0];
@@ -574,13 +572,13 @@ public class Poker
     }
 
     /*
-       this is called when everyone has bet and all 5 community cards are dealt
-       this is where the showdown happens
-       this is where the pot is split between the players
-       this is where the players who went all in get their money back
-       this is where the players who lost the pot lose money
-       this is where the players who won the pot win money
-       
+    this is called when everyone has bet and all 5 community cards are dealt
+    this is where the showdown happens
+    the pot is split between the players
+    the players who went all in get their money back
+    the players who lost the pot lose money
+    the players who won the pot win money
+
     */
     public void Showdown()
     {

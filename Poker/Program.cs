@@ -1,6 +1,8 @@
 using Poker.Hubs;
 using Poker.Models;
 using Poker.Services;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +14,18 @@ builder.Services.AddSignalR()
         options.PayloadSerializerOptions.PropertyNamingPolicy = null;
     });
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<Poker.Models.Poker>(); // Changed from AddSingleton to AddScoped
 // builder.Services.AddSingleton<Poker.Models.Poker>();
+
+builder.Services.AddControllersWithViews().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new CardJsonConverter());
+});
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8080); // Listen on 0.0.0.0:80
+});
 
 var app = builder.Build();
 
@@ -34,30 +47,8 @@ app.Urls.Clear();
 app.MapFallbackToFile("index.html");
 
 // Configure the URLs
-app.Urls.Add("http://localhost:5160");
+// app.Urls.Add("http://localhost:8080");
 // app.Urls.Add("https://localhost:7160");
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet(
-        "/weatherforecast",
-        () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
 
 app.MapHub<PokerHub>("/pokerhub");
 app.MapGet("/games", () =>
@@ -74,7 +65,3 @@ app.MapGet("/games", () =>
 });
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

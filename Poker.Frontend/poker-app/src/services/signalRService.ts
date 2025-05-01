@@ -1,10 +1,13 @@
 import * as signalR from "@microsoft/signalr";
+import { ref } from "vue";
 
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://localhost:5160/pokerhub") // Replace with your backend URL
+    .withUrl("http://localhost:8080/pokerhub") // Replace with your backend URL
     .withAutomaticReconnect()
     .build();
 
+export const playerId = ref<string>("player1");
+export const gameId = ref("game123");
 export async function startSignalRConnection() {
     try {
         await connection.start();

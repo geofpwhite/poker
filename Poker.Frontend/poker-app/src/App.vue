@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import Poker from './components/Poker.vue'
+import Lobbies from './components/Lobbies.vue';
+import { onMounted } from 'vue';
+import { startSignalRConnection } from './services/signalRService';
+import '@/assets/style.css';
+
+
+onMounted(async () => {
+  // This is where you can initialize any global state or perform actions when the app is mounted
+  await startSignalRConnection();
+});
 </script>
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
     <div class="wrapper">
-      <Poker msg="You did it!" />
+      <!-- <Poker msg="You did it!" /> -->
 
       <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-        <RouterLink to="/world">About</RouterLink>
+        <!-- <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About</RouterLink> -->
+        <!-- <RouterLink to="/lobbies">Lobbies</RouterLink> -->
       </nav>
     </div>
   </header>
@@ -21,7 +30,7 @@ import Poker from './components/Poker.vue'
   <RouterView />
 </template>
 
-<style scoped>
+<!-- <style scoped>
 header {
   line-height: 1.5;
   max-height: 100vh;
@@ -83,4 +92,4 @@ nav a:first-of-type {
     margin-top: 1rem;
   }
 }
-</style>
+</style> -->

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.SignalR;
+using Poker.Models;
 
 namespace Poker.Hubs;
 
@@ -30,36 +31,63 @@ public class PokerHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task StartGame(string gameId)
+
+    public async Task CloseGame(string gameId)
     {
-        if (!Games.ContainsKey(gameId))
+        if (Games.ContainsKey(gameId))
         {
-            Games.Add(gameId, new Models.Poker());
+            Games.Remove(gameId);
+            await Clients.Group(gameId).SendAsync("GameClosed", gameId);
         }
         else
         {
-            Games[gameId] = new Models.Poker(Games[gameId].Players);
+            await Clients.Caller.SendAsync("GameNotFound", gameId);
         }
-
-        await Clients.Group(gameId).SendAsync("GameStarted", Games.GetValueOrDefault(gameId));
     }
 
-    public async Task JoinGame(string gameId)
+    public async Task CreateGame(string gameId)
+    {
+        if (Games.ContainsKey(gameId))
+        {
+            await Clients.Caller.SendAsync("GameAlreadyExists", gameId);
+            return;
+        }
+
+        var game = new Models.Poker();
+        Games[gameId] = game;
+        await Clients.Caller.SendAsync("GameCreated", gameId);
+    }
+    public async Task StartGame(string gameId)
+    {
+
+        Games[gameId].Deal();
+        Games[gameId].Started = true;
+        await Clients.Group(gameId).SendAsync("GameStarted", Games.GetValueOrDefault(gameId));
+        foreach (var player in Games[gameId].Players)
+        {
+            await Clients.Client(player.ConnectionId).SendAsync("PlayerCards", player.Cards.Select(c => c.ToString()));
+        }
+    }
+
+    public async Task JoinGame(string playerName, string gameId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
         if (Games.ContainsKey(gameId))
         {
             Games[gameId].Players = Games[gameId]
                 .Players.Append(
-                    new Models.Player(Context.ConnectionId)
+                    new Player(Context.ConnectionId)
                     {
-                        Name = "",
+                        Name = playerName,
                         ConnectionId = Context.ConnectionId,
+                        Chips = 1000,
+                        // Folded = true,
                     }
                 )
                 .ToArray();
         }
         await Clients.Group(gameId).SendAsync("UserJoined", Context.ConnectionId);
+        await Clients.Caller.SendAsync("GameStateUpdated", Games[gameId]);
     }
 
     public async Task LeaveGame(string gameId)
@@ -71,19 +99,17 @@ public class PokerHub : Hub
     public async Task PlayerAction(string gameId, string action, int data)
     {
         // Handle the game state modification based on the action
-        HandlePlayerAction(gameId, action, data);
+        await HandlePlayerAction(gameId, action, data);
         await Clients
             .Group(gameId)
-            .SendAsync("GameStateUpdated", new Poker.Models.Poker(Games[gameId].Players));
+            .SendAsync("GameStateUpdated", Games[gameId]);
     }
 
-    private void HandlePlayerAction(string gameId, string action, object data)
+    private async Task HandlePlayerAction(string gameId, string action, object data)
     {
         if (!Games.ContainsKey(gameId))
             return;
-        int index = Games[gameId]
-            .Players.ToList()
-            .FindIndex(p => p.ConnectionId == Context.ConnectionId);
+        int index = Array.FindIndex(Games[gameId].Players, p => p.ConnectionId == Context.ConnectionId);
         if (index == -1 || index != Games[gameId].Turn)
             return;
         Games[gameId].Lock.EnterWriteLock();
@@ -111,7 +137,6 @@ public class PokerHub : Hub
                         Games[gameId].Pot += callAmount;
                     }
                 }
-
                 break;
             case "raise":
                 if (data is int raiseAmount)
@@ -133,9 +158,15 @@ public class PokerHub : Hub
         }
         Games[gameId].AdvanceRound();
         Games[gameId].Lock.ExitWriteLock();
+        if (Games[gameId].Round == 0)
+        {
+            foreach (var player in Games[gameId].Players)
+            {
+                await Clients.Client(player.ConnectionId).SendAsync("PlayerCards", player.Cards.Select(c => c.ToString()));
+            }
+        }
 
         // After handling the action, check if the round should progress
     }
 
-    private void CheckRoundProgress(string gameId) { }
 }

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poker-app
+  labels:
+    app: poker-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: poker-app
+  template:
+    metadata:
+      labels:
+        app: poker-app
+    spec:
+      containers:
+      - name: poker-app
+        image: poker-app:latest
+        ports:
+        - containerPort: 80

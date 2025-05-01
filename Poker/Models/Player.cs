@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Poker.Models;
 
 public class Player
@@ -11,9 +13,13 @@ public class Player
 
     public required string Name { get; init; }
     public int Chips { get; set; } = 0;
+
+    [JsonIgnore]
     public Card[] Cards { get; set; } = [];
     public bool Folded { get; set; } = false;
     public int LastBet { get; set; } = 0;
+
+
 
     // public Player(string name, int chips)
     // {
