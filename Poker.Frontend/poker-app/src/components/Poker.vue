@@ -3,14 +3,14 @@ import { ref, onMounted } from "vue";
 import { gameId, startSignalRConnection, onEvent, sendEvent, playerId } from '../services/signalRService';
 import Hand from './Hand.vue';
 import Table from './Table.vue';
-import type { GameState } from '../models/GameState';
+import { type Player, type GameState } from '../models/GameState';
 // import '@/assets/style.css';
 const messages = ref<string[]>([]);
 const sliderValue = ref(50);
 const myCards = ref<string[]>([]);
 const communityCards = ref<string[]>([]);
 const game = ref<GameState>({} as GameState);
-
+const players = ref<Player[]>([]);
 
 onMounted(async () => {
   // await startSignalRConnection();
@@ -19,6 +19,7 @@ onMounted(async () => {
     messages.value.push(`Game state updated: ${JSON.stringify(gameState)}`);
     game.value = gameState as GameState;
     communityCards.value = gameState.CommunityCards;
+    players.value = gameState.Players;
   });
   onEvent("GameStarted", (gameData) => {
     messages.value.push(`Game started: ${JSON.stringify(gameData)}`);
@@ -26,6 +27,7 @@ onMounted(async () => {
 
   onEvent("UserJoined", (userId) => {
     messages.value.push(`User joined: ${userId}`);
+
   });
 
   onEvent("PlayerCards", (cards) => {
@@ -91,7 +93,7 @@ const raise = (amt: number) => {
         class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">Raise</button>
 
     </div>
-    <Table :Players="game.Players" style="margin-bottom: 25px"></Table>
+    <Table :Players="players" style="margin-bottom: 25px"></Table>
     <Hand :cards="communityCards" />
     <Hand :cards="myCards" class="mt-4" />
     <ul

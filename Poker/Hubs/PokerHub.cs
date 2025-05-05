@@ -12,7 +12,7 @@ public class PokerHub : Hub
     public static Dictionary<string, Models.Poker> Games = [];
     private static readonly Dictionary<string, string> _playerConnections = new();
 
-    public PokerHub(ILogger<PokerHub> logger, Models.Poker pokerGame)
+    public PokerHub(ILogger<PokerHub> logger)
     {
         _logger = logger;
     }
@@ -87,7 +87,7 @@ public class PokerHub : Hub
                 .ToArray();
         }
         await Clients.Group(gameId).SendAsync("UserJoined", Context.ConnectionId);
-        await Clients.Caller.SendAsync("GameStateUpdated", Games[gameId]);
+        await Clients.Group(gameId).SendAsync("GameStateUpdated", Games[gameId]);
     }
 
     public async Task LeaveGame(string gameId)

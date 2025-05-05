@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { defineProps } from 'vue';
 import type { Player } from '@/models/GameState';
+import { h } from 'vue';
 defineProps({
     Players: {
         type: Array as () => Player[],
         required: true
     }
 });
+
 </script>
 <style scoped>
 /* Basic reset & centering */
@@ -51,6 +53,7 @@ body {
     /* move left by half the circle's width */
     top: 50%;
     transform: translateY(-50%);
+    background-color: #006400;
 }
 
 /* Position the right circle half-overlapping the right edge */
@@ -58,6 +61,7 @@ body {
     right: -98px;
     top: 50%;
     transform: translateY(-50%);
+    background-color: #006400;
 }
 
 /* Hollow black circles */
@@ -116,12 +120,12 @@ body {
         <div class="table">
             <div class="circle left"></div>
             <div class="circle right"></div>
-            <div class="hollow-circle top-left"></div>
-            <div class="hollow-circle bottom-left"></div>
-            <div class="hollow-circle top-right"></div>
-            <div class="hollow-circle bottom-right"></div>
-            <div class="hollow-circle top"></div>
-            <div class="hollow-circle bottom"></div>
+            <div class="hollow-circle bottom-left" v-if="Players.length >= 1"></div>
+            <div class="hollow-circle top-left" v-if="Players.length >= 2"></div>
+            <div class="hollow-circle top" v-if="Players.length >= 3"></div>
+            <div class="hollow-circle top-right" v-if="Players.length >= 4"></div>
+            <div class="hollow-circle bottom-right" v-if="Players.length >= 5"></div>
+            <div class="hollow-circle bottom" v-if="Players.length >= 6"></div>
         </div>
     </body>
 

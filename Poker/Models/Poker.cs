@@ -11,7 +11,9 @@ using Microsoft.Extensions.ObjectPool;
 public class Poker
 {
     public Player[] Players { get; set; } = [];
-    private Card[] Deck { get; set; } = [];
+
+    [JsonIgnore]
+    public Card[] Deck { get; set; } = [];
 
     public int Round { get; set; } = 0;
     public int Dealer { get; set; } = 0;
