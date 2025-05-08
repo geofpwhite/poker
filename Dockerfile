@@ -1,8 +1,3 @@
-# Use the official .NET image as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-WORKDIR /app
-EXPOSE 80
-
 # Use the official .NET SDK image to build the application
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
@@ -10,7 +5,8 @@ WORKDIR /src
 COPY Poker/ ./Poker/ 
 WORKDIR /src/Poker
 RUN dotnet restore "Poker.csproj"
-RUN dotnet build "Poker.csproj" -c Release -o /app/build
+RUN dotnet publish "Poker.csproj" -c Release -o /app/publish
+
 # Add a stage to build the frontend
 FROM node:23.9-alpine AS frontend-build
 WORKDIR /frontend
@@ -19,16 +15,14 @@ RUN npm install
 COPY Poker.Frontend/poker-app/ ./
 RUN npm run build
 
-# Publish the application
-FROM build AS publish
-RUN dotnet publish "Poker.csproj" -c Release -o /app/publish
-
 # Copy the built frontend into the backend's wwwroot
+FROM build AS publish
 RUN mkdir -p /app/publish/wwwroot
 COPY --from=frontend-build /frontend/dist /app/publish/wwwroot
+COPY Poker/wwwroot/cards /app/publish/wwwroot/cards
 
-# Use the base image to run the application
-FROM base AS final
+# Create the final image from scratch
+FROM scratch AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 8080
