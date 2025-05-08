@@ -1,7 +1,7 @@
-import * as signalR from "@microsoft/signalr";
+import * as signalr from "@microsoft/signalr";
 import { ref } from "vue";
 
-const connection = new signalR.HubConnectionBuilder()
+const connection = new signalr.HubConnectionBuilder()
     .withUrl("http://localhost:8080/pokerhub") // Replace with your backend URL
     .withAutomaticReconnect()
     .build();

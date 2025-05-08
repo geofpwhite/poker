@@ -14,8 +14,8 @@ public class UnitTest1
         var mockHubContext = new Mock<IHubContext<PokerHub>>();
         var pokerHub = new PokerHub(mockHubContext.Object);
 
-        var player1 = new Player { Name = "Player1", ConnectionId = "conn1" };
-        var player2 = new Player { Name = "Player2", ConnectionId = "conn2" };
+        var player1 = new Player("p1") { Name = "Player1", ConnectionId = "conn1" };
+        var player2 = new Player("p2") { Name = "Player2", ConnectionId = "conn2" };
 
         // Act
         await pokerHub.JoinGame("game1", player1);

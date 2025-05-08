@@ -40,8 +40,6 @@ public class Poker
             Deck = Deck.Append(card).ToArray();
         }
         Shuffle();
-        Console.WriteLine(Deck.Length);
-        //print deck
         Round = 0;
         Turn = 0;
         CommunityCards = [];

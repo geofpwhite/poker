@@ -14,7 +14,6 @@ public class PokerTests
         // var game = new Poker(players);
         var game = new Models.Poker { Players = players };
         var originalDeck = game.Deck.ToArray();
-        game.getDeck();
 
         // Act
         game.Shuffle();
