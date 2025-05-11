@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.SignalR;
 using Poker.Models;
@@ -9,14 +10,26 @@ namespace Poker.Hubs;
 public class PokerHub : Hub
 {
     private readonly ILogger<PokerHub> _logger;
-    public static Dictionary<string, Models.Poker> Games = [];
-    private static readonly Dictionary<string, string> _playerConnections = new();
+    public static Dictionary<string, Models.PokerGame> Games = [];
+    public static Dictionary<Models.PokerGame, TimeOnly> LastTimeStamps = new();
+    private Timer cleanupTimer;
+
 
     public PokerHub(ILogger<PokerHub> logger)
     {
+        cleanupTimer = new Timer(CleanupGames, null, TimeSpan.Zero, TimeSpan.FromMinutes(10));
         _logger = logger;
     }
+    private void CleanupGames(object? state)
+    {
 
+        var expiredGames = Games.Where(g => LastTimeStamps[g.Value].IsBetween(TimeOnly.FromDateTime(DateTime.Now.AddMinutes(-10)), TimeOnly.FromDateTime(DateTime.Now))).Select(g => g.Key).ToList();
+        foreach (var gameId in expiredGames)
+        {
+            Games.Remove(gameId);
+            Clients.Group(gameId).SendAsync("GameClosed");
+        }
+    }
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation($"Client connected: {Context.ConnectionId}");
@@ -53,7 +66,7 @@ public class PokerHub : Hub
             return;
         }
 
-        var game = new Models.Poker();
+        var game = new Models.PokerGame();
         Games[gameId] = game;
         await Clients.Caller.SendAsync("GameCreated", gameId);
     }
@@ -92,8 +105,12 @@ public class PokerHub : Hub
 
     public async Task LeaveGame(string gameId)
     {
+
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId);
         await Clients.Group(gameId).SendAsync("UserLeft", Context.ConnectionId);
+        Games[gameId].Lock.EnterWriteLock();
+        Games[gameId].Players = Games[gameId].Players.Where(p => p.ConnectionId != Context.ConnectionId).ToArray();
+        Games[gameId].Lock.ExitWriteLock();
     }
 
     public async Task PlayerAction(string gameId, string action, int data)
@@ -113,6 +130,14 @@ public class PokerHub : Hub
         if (index == -1 || index != Games[gameId].Turn)
             return;
         Games[gameId].Lock.EnterWriteLock();
+        if (LastTimeStamps.ContainsKey(Games[gameId]))
+        {
+            LastTimeStamps[Games[gameId]] = TimeOnly.FromDateTime(DateTime.Now);
+        }
+        else
+        {
+            LastTimeStamps.Add(Games[gameId], TimeOnly.FromDateTime(DateTime.Now));
+        }
         switch (action.ToLower())
         {
             case "fold":

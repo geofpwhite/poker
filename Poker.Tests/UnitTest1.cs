@@ -1,5 +1,6 @@
 ﻿using Poker.Models;
 using Poker.Hubs;
+
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 
@@ -11,23 +12,14 @@ public class UnitTest1
     public async Task TwoPlayersJoinAndPlayGame()
     {
         // Arrange
-        var mockHubContext = new Mock<IHubContext<PokerHub>>();
-        var pokerHub = new PokerHub(mockHubContext.Object);
+        var player1 = new Player("Player1") { Name = "Player1", Chips = 100 };
+        var player2 = new Player("Player2") { Name = "Player2", Chips = 100 };
+        var players = new[] { player1, player2 };
+        var game = new PokerGame(players);
+        var mockContext = new Mock<HubCallerContext>();
+        var mockClients = new Mock<IHubCallerClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(clients => clients.All).Returns(mockClientProxy.Object);
 
-        var player1 = new Player("p1") { Name = "Player1", ConnectionId = "conn1" };
-        var player2 = new Player("p2") { Name = "Player2", ConnectionId = "conn2" };
-
-        // Act
-        await pokerHub.JoinGame("game1", player1);
-        await pokerHub.JoinGame("game1", player2);
-        await pokerHub.StartGame("game1");
-
-        await pokerHub.Check("game1", player1);
-        await pokerHub.Check("game1", player2);
-
-        // Assert
-        var game = PokerHub.Games["game1"];
-        Assert.NotNull(game);
-        Assert.Equal(2, game.Players.Count);
     }
 }

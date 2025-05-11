@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Poker.Tests;
 
-public class PokerTests
+public class PokerGameTests
 {
     [Fact]
     public void Shuffle_ShouldRandomizeDeck()
@@ -11,8 +11,8 @@ public class PokerTests
         // Arrange
         Player player1 = new("Player1") { Name = "Player1", Chips = 100 };
         var players = new Player[] { player1 };
-        // var game = new Poker(players);
-        var game = new Models.Poker { Players = players };
+        // var game = new PokerGame(players);
+        var game = new Models.PokerGame { Players = players };
         var originalDeck = game.Deck.ToArray();
 
         // Act
@@ -29,7 +29,7 @@ public class PokerTests
         // Arrange
         Player player1 = new("Player1") { Name = "Player1", Chips = 100 };
         var players = new Player[] { player1 };
-        var game = new Poker(players);
+        var game = new PokerGame(players);
 
         // Act
         game.Deal();
@@ -46,7 +46,7 @@ public class PokerTests
     public void ScoreHand_ShouldReturnCorrectScore()
     {
         // Arrange
-        var game = new Poker();
+        var game = new PokerGame();
         var hand = new Card[] { Card.AceH, Card.AceD, Card.TwoH, Card.ThreeD, Card.FourC, Card.EightC, Card.SevenS };
         var score = game.ScoreHand(hand);
         Assert.Equal(Hand.Pair, score);

@@ -22,7 +22,7 @@ COPY --from=frontend-build /frontend/dist /app/publish/wwwroot
 COPY Poker/wwwroot/cards /app/publish/wwwroot/cards
 
 # Create the final image with only the executable and required files
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS final
+FROM mcr.microsoft.com/dotnet/sdk:9.0 
 WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 8080

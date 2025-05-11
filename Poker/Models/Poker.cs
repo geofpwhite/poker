@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.ObjectPool;
 
-public class Poker
+public class PokerGame
 {
     public Player[] Players { get; set; } = [];
 
@@ -31,7 +31,7 @@ public class Poker
     [JsonConverter(typeof(CardJsonConverter))]
     public Card[] CommunityCards { get; set; } = [];
 
-    public Poker(Player[]? players = null)
+    public PokerGame(Player[]? players = null)
     {
         Players = players ?? [];
         Deck = [];

@@ -14,7 +14,7 @@ builder.Services.AddSignalR()
         options.PayloadSerializerOptions.PropertyNamingPolicy = null;
     });
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<Poker.Models.Poker>(); // Changed from AddSingleton to AddScoped
+builder.Services.AddScoped<Poker.Models.PokerGame>(); // Changed from AddSingleton to AddScoped
 // builder.Services.AddSingleton<Poker.Models.Poker>();
 
 builder.Services.AddControllersWithViews().AddJsonOptions(options =>
